@@ -113,14 +113,31 @@
                     <div id="countdown-timer" class="text-3xl font-bold mt-6 text-gold-600">Ticket sales ending in: --:--:--</div>
                 </div>
 
-                <!-- LOGIN CONTAINER (RE-ADDED) -->
-                <div id="login-form-container" class="hidden max-w-sm mx-auto p-4 border border-blue-300 bg-blue-50 rounded-xl">
-                    <p class="text-center text-sm font-semibold text-blue-800 mb-3">Sign in as Agent or Admin</p>
-                    <button id="google-sign-in-btn" type="button" class="w-full py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-bold flex items-center justify-center shadow-md hover:bg-gray-100 transition duration-150">
-                        <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M30 44c4.4 0 8.7-1.4 12.1-4.3l-5-4.1c-2.3 2-5 3.1-7.1 3.1-6.1 0-11.2-4.1-13-9.5H0v5.3C3.5 39.5 16 44 30 44z"/><path fill="#FF3D00" d="M16 24c0-1.6.4-3.2.9-4.7V14.5H0V19c0 7.2 4.6 13.5 11.2 15.8l4.8-4.1c-.2-1.2-.5-2.5-.5-4.7z"/><path fill="#4CAF50" d="M30 14.5c3.2 0 6.1 1.1 8.4 3.1l4.4-4.2C39 10.1 34.6 8 30 8c-6 0-11.7 3-15.5 8.3l4.8 4.1c1.4-3.9 5.3-6.9 10.7-6.9z"/><path fill="#1976D2" d="M48 24c0-.9-.1-1.6-.2-2.4H30v4.7h10.4c-.6 3-2.3 5.4-4.8 7.3l4.1 3.5c3.5-3.3 5.5-8 5.5-13.1z"/></svg>
-                        Sign in with Google
-                    </button>
-                    <p id="login-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
+                <!-- LOGIN CONTAINER (MODIFIED FOR ADMIN/AGENT SEPARATION) -->
+                <div id="login-form-container" class="hidden max-w-lg mx-auto p-4 border border-blue-300 bg-blue-50 rounded-xl grid grid-cols-1 md:grid-cols-2 gap-4">
+                    
+                    <!-- ADMIN LOGIN (Google) -->
+                    <div class="p-4 bg-white rounded-lg shadow">
+                        <p class="text-center text-lg font-bold text-red-700 mb-4">Admin Login</p>
+                        <button id="google-sign-in-btn" type="button" class="w-full py-2 bg-red-600 text-white rounded-lg font-bold flex items-center justify-center shadow-md hover:bg-red-700 transition duration-150">
+                             <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M30 44c4.4 0 8.7-1.4 12.1-4.3l-5-4.1c-2.3 2-5 3.1-7.1 3.1-6.1 0-11.2-4.1-13-9.5H0v5.3C3.5 39.5 16 44 30 44z"/><path fill="#FF3D00" d="M16 24c0-1.6.4-3.2.9-4.7V14.5H0V19c0 7.2 4.6 13.5 11.2 15.8l4.8-4.1c-.2-1.2-.5-2.5-.5-4.7z"/><path fill="#4CAF50" d="M30 14.5c3.2 0 6.1 1.1 8.4 3.1l4.4-4.2C39 10.1 34.6 8 30 8c-6 0-11.7 3-15.5 8.3l4.8 4.1c1.4-3.9 5.3-6.9 10.7-6.9z"/><path fill="#1976D2" d="M48 24c0-.9-.1-1.6-.2-2.4H30v4.7h10.4c-.6 3-2.3 5.4-4.8 7.3l4.1 3.5c3.5-3.3 5.5-8 5.5-13.1z"/></svg>
+                            Sign in as Admin (Google)
+                        </button>
+                    </div>
+
+                    <!-- AGENT LOGIN (Email/Password) -->
+                    <div class="p-4 bg-white rounded-lg shadow">
+                        <p class="text-center text-lg font-bold text-blue-700 mb-4">Agent Login</p>
+                        <input id="agent-login-email" type="email" placeholder="Email" class="w-full p-2 border rounded-lg mb-2">
+                        <input id="agent-login-password" type="password" placeholder="Password" class="w-full p-2 border rounded-lg mb-4">
+                        <button id="agent-sign-in-btn" type="button" class="btn-primary w-full py-2 rounded-lg font-bold">
+                            Agent Sign In
+                        </button>
+                    </div>
+                    
+                    <div class="col-span-1 md:col-span-2">
+                        <p id="login-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
+                    </div>
                 </div>
                 <!-- END LOGIN CONTAINER -->
 
@@ -161,7 +178,7 @@
                         <select id="agent-lottery-select" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500 mb-3"></select>
                         <input id="agent-participant-name" type="text" placeholder="Participant Name (Required)" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         <input id="agent-participant-phone" type="tel" placeholder="Phone (Optional)" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
-                        <input id="agent-payment-proof-ref" type="text" placeholder="Payment Proof Ref (e.g., UPI ID)" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                        <input id="agent-payment-proof-ref" type="text" placeholder="Payment Proof Ref (e.g., UPI ID/Cash)" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     </div>
                     <button id="agent-generate-btn" class="btn-primary w-full mt-4 py-3 rounded-lg text-lg disabled:opacity-50" disabled>
                         Generate & Register Participant
@@ -171,20 +188,22 @@
 
                 <!-- Agent Participant List -->
                 <div class="mt-8">
-                    <h3 class="text-xl font-semibold text-blue-700 mb-4">My Participants (Agent View)</h3>
+                    <h3 class="text-xl font-semibold text-blue-700 mb-4">My Registered Participants (Offline Payments)</h3>
+                    <p class="text-sm text-gray-500 mb-4">These participants have been registered by you. Their payments must be verified by the Admin after you have collected the cash/proof.</p>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Serial</th>
-                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name & Phone</th>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lottery</th>
+                                    <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Proof Ref</th>
                                     <th class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                 </tr>
                             </thead>
                             <tbody id="agent-participants-table" class="bg-white divide-y divide-gray-200">
                                 <!-- Agent participant data rendered here -->
-                                <tr><td colspan="4" class="text-center py-4 text-gray-500">No participants registered yet.</td></tr>
+                                <tr><td colspan="5" class="text-center py-4 text-gray-500">No participants registered yet.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -277,7 +296,7 @@
     <!-- Firebase Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, runTransaction, setDoc, getDoc, setLogLevel, collection, addDoc, updateDoc, getDocs, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { nanoid } from 'https://cdn.jsdelivr.net/npm/nanoid/nanoid.js';
 
@@ -328,6 +347,8 @@
         let views = {};
         // Status/Auth
         let loadingOverlay, globalStatusMsg, authButton, userRoleDisplay, loginFormContainer, googleSignInBtn, loginError;
+        let agentLoginEmail, agentLoginPassword, agentSignInBtn; // NEW AGENT LOGIN ELEMENTS
+
         // Agent Elements
         let agentLotterySelect, agentParticipantName, agentParticipantPhone, agentPaymentProofRef, agentGenerateBtn, agentStatus, agentParticipantsTable;
         // Admin Elements
@@ -353,10 +374,14 @@
             globalStatusMsg = document.getElementById('status-message-global');
             authButton = document.getElementById('auth-button');
             userRoleDisplay = document.getElementById('user-role-display');
-            // FIX 1: Fetching the newly added login-form-container and fixing loginError reference.
+            
+            // Auth Elements
             loginFormContainer = document.getElementById('login-form-container'); 
             googleSignInBtn = document.getElementById('google-sign-in-btn');
-            loginError = document.getElementById('login-error'); // Now correctly referencing the re-added HTML element.
+            loginError = document.getElementById('login-error'); 
+            agentLoginEmail = document.getElementById('agent-login-email'); // NEW
+            agentLoginPassword = document.getElementById('agent-login-password'); // NEW
+            agentSignInBtn = document.getElementById('agent-sign-in-btn'); // NEW
 
             // Agent Elements
             agentLotterySelect = document.getElementById('agent-lottery-select');
@@ -384,8 +409,8 @@
 
             // 2. Attach Listeners
             if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
+            if (agentSignInBtn) agentSignInBtn.addEventListener('click', handleAgentLogin); // NEW AGENT LOGIN LISTENER
             
-            // The home-agent-login-btn is guaranteed to exist in the HTML (outside the script scope)
             document.getElementById('home-agent-login-btn').addEventListener('click', () => {
                  if (loginFormContainer) loginFormContainer.classList.remove('hidden');
             });
@@ -484,13 +509,14 @@
             currentAgentId = null;
 
             if (user) {
+                // Determine Role based on Email
                 if (user.email === ADMIN_EMAIL) {
                     userRole = 'admin';
                     renderView('admin');
                 } else if (AGENT_EMAILS.includes(user.email)) {
                     userRole = 'agent';
-                    // In a real app, agentId would be retrieved from an Agents collection
-                    currentAgentId = 'AGENT-' + user.uid.substring(0, 4).toUpperCase();
+                    // Agent ID is generated from UID for unique tracking
+                    currentAgentId = 'AGENT-' + user.uid.substring(0, 8).toUpperCase(); // Using 8 chars for better distinction
                     renderView('agent');
                 } else {
                     userRole = 'participant'; // Signed in user but not admin/agent
@@ -521,20 +547,56 @@
         }
 
         /**
-         * Handles the Google Sign-In process.
+         * Handles the Google Sign-In process (for Admin).
          */
         async function handleGoogleSignIn() {
             if(loginError) loginError.classList.add('hidden');
             try {
                 if(loadingOverlay) loadingOverlay.classList.remove('hidden');
                 await signInWithPopup(auth, googleProvider);
+                // AuthStateChanged will handle role assignment and view change
             } catch (error) {
                 console.error("Google Sign-In failed:", error.code, error.message);
-                if(globalStatusMsg) {
-                    globalStatusMsg.textContent = `Sign In failed: ${error.message}`;
-                    globalStatusMsg.classList.remove('hidden');
+                if(loginError) {
+                    loginError.textContent = `Admin Login failed: ${error.message}`;
+                    loginError.classList.remove('hidden');
                 }
             } finally {
+                if(loadingOverlay) loadingOverlay.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Handles the Agent Email/Password Sign-In process (for Agents).
+         */
+        async function handleAgentLogin() {
+            if(!agentLoginEmail || !agentLoginPassword || !agentSignInBtn || !loginError) return;
+            
+            const email = agentLoginEmail.value.trim();
+            const password = agentLoginPassword.value.trim();
+
+            if (!email || !password) {
+                loginError.textContent = 'Please enter both email and password for Agent login.';
+                loginError.classList.remove('hidden');
+                return;
+            }
+
+            loginError.classList.add('hidden');
+            agentSignInBtn.textContent = 'Signing In...';
+            agentSignInBtn.disabled = true;
+
+            try {
+                if(loadingOverlay) loadingOverlay.classList.remove('hidden');
+                // Use standard email/password sign in
+                await signInWithEmailAndPassword(auth, email, password);
+                // AuthStateChanged will handle role assignment and view change
+            } catch (error) {
+                console.error("Agent Sign-In failed:", error.code, error.message);
+                loginError.textContent = `Agent Login failed: ${error.message}. (Check credentials and Firebase Auth setup)`;
+                loginError.classList.remove('hidden');
+            } finally {
+                agentSignInBtn.textContent = 'Agent Sign In';
+                agentSignInBtn.disabled = false;
                 if(loadingOverlay) loadingOverlay.classList.add('hidden');
             }
         }
@@ -822,7 +884,7 @@
             if (agentUnsub) agentUnsub(); // Clear previous participant list listener
             if (agentStatsUnsub) agentStatsUnsub(); // Clear previous stats listener
 
-            // 1. Setup Participant List Listener (Only for this agent)
+            // 1. Setup Participant List Listener (Filters by current agent's ID)
             const qParticipants = query(
                 collection(db, COLLECTIONS.PARTICIPANTS),
                 where('agentId', '==', currentAgentId)
@@ -855,7 +917,7 @@
             if(!agentParticipantsTable) return;
             agentParticipantsTable.innerHTML = '';
             if (participants.length === 0) {
-                agentParticipantsTable.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-gray-500">No participants registered yet.</td></tr>';
+                agentParticipantsTable.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-gray-500">No participants registered yet.</td></tr>';
                 return;
             }
 
@@ -865,8 +927,12 @@
                 row.className = 'hover:bg-gray-50';
                 row.innerHTML = `
                     <td class="px-3 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${p.serial}</td>
-                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${p.name}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${p.name} <br>
+                        <span class="text-xs text-gray-400">${p.phone || 'No Phone'}</span>
+                    </td>
                     <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${p.lotteryId}</td>
+                    <td class="px-3 py-4 whitespace-nowrap text-sm text-gray-500">${p.paymentProof || 'N/A'}</td>
                     <td class="px-3 py-4 whitespace-nowrap text-sm font-semibold ${statusClass}">${p.paymentStatus}</td>
                 `;
                 agentParticipantsTable.appendChild(row);
@@ -931,10 +997,10 @@
                     phone: phone,
                     agentId: currentAgentId,
                     registrationDate: serverTimestamp(),
-                    paymentStatus: proofRef ? 'Pending' : 'Pending', // Payment proof means we expect verification
+                    paymentStatus: 'Pending', // Agent collects payment offline, so status defaults to Pending
                     paymentProof: proofRef, 
-                    email: currentUserEmail,
-                    address: "Not yet captured" // Simplified, full details would be needed
+                    email: null, // Participant email/address simplified/omitted for agent workflow
+                    address: null 
                 });
 
                 if(agentStatus) {
