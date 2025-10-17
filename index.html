@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequential Lottery Tickets</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Inter font -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f7f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .ticket-display {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FFD166 100%);
+            color: #1a202c;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            max-width: 400px;
+        }
+        .ticket-display::before {
+            content: 'TICKET #';
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            opacity: 0.6;
+            letter-spacing: 0.1em;
+        }
+        .button-primary {
+            background-color: #2F80ED;
+            transition: background-color 0.15s, transform 0.15s;
+        }
+        .button-primary:hover {
+            background-color: #296EB4;
+            transform: translateY(-2px);
+        }
+        .button-primary:active {
+            transform: translateY(0);
+        }
+        .button-danger {
+            background-color: #EF4444;
+            transition: background-color 0.15s, transform 0.15s;
+        }
+        .button-danger:hover {
+            background-color: #DC2626;
+            transform: translateY(-2px);
+        }
+        .button-danger:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app" class="w-full max-w-lg p-4 md:p-8">
+        <!-- Main Application Card -->
+        <div class="bg-white p-6 md:p-10 rounded-xl shadow-2xl border border-gray-100">
+            <h1 class="text-3xl font-extrabold text-gray-800 mb-2 text-center">
+                Serial Ticket Dispenser
+            </h1>
+            <p class="text-gray-500 text-center mb-6">
+                Click below to get the next unique ticket number from the shared counter.
+            </p>
+
+            <!-- Current User Info / Login Status -->
+            <div id="auth-status" class="text-xs text-gray-500 mb-4 bg-gray-50 p-2 rounded-lg text-center break-all flex justify-between items-center">
+                <span id="user-status-display">Loading...</span>
+                <button id="auth-button" class="px-3 py-1 text-xs font-semibold rounded-lg text-white bg-gray-400 hover:bg-gray-500 hidden">
+                    Login
+                </button>
+            </div>
+
+            <!-- Login/Sign-in Form (Updated for Google) -->
+            <div id="login-form-container" class="hidden mb-6 p-4 border border-blue-200 bg-blue-50 rounded-lg">
+                <h2 class="text-lg font-bold text-blue-700 mb-3 text-center">Admin/User Sign In</h2>
+                <button id="google-sign-in-btn" type="button" class="w-full py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-bold flex items-center justify-center shadow-md hover:bg-gray-100 transition duration-150">
+                    <svg class="w-5 h-5 mr-2" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="#FFC107" d="M30 44c4.4 0 8.7-1.4 12.1-4.3l-5-4.1c-2.3 2-5 3.1-7.1 3.1-6.1 0-11.2-4.1-13-9.5H0v5.3C3.5 39.5 16 44 30 44z"/><path fill="#FF3D00" d="M16 24c0-1.6.4-3.2.9-4.7V14.5H0V19c0 7.2 4.6 13.5 11.2 15.8l4.8-4.1c-.2-1.2-.5-2.5-.5-4.7z"/><path fill="#4CAF50" d="M30 14.5c3.2 0 6.1 1.1 8.4 3.1l4.4-4.2C39 10.1 34.6 8 30 8c-6 0-11.7 3-15.5 8.3l4.8 4.1c1.4-3.9 5.3-6.9 10.7-6.9z"/><path fill="#1976D2" d="M48 24c0-.9-.1-1.6-.2-2.4H30v4.7h10.4c-.6 3-2.3 5.4-4.8 7.3l4.1 3.5c3.5-3.3 5.5-8 5.5-13.1z"/></svg>
+                    Sign in with Google
+                </button>
+                <p id="login-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
+            </div>
+
+            <!-- Global Latest Ticket Display -->
+            <div class="text-center mb-6">
+                <p class="text-sm font-semibold text-gray-500 uppercase tracking-wider">Latest Global Ticket ID</p>
+                <div class="text-4xl font-extrabold text-indigo-600 mt-1" id="latest-global-id">
+                    ---
+                </div>
+            </div>
+
+            <!-- Action Button (Hidden until logged in) -->
+            <button id="get-ticket-btn"
+                    class="button-primary w-full py-3 rounded-xl text-white font-bold text-lg shadow-lg shadow-blue-300/50 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hidden"
+                    disabled>
+                Get New Ticket
+            </button>
+
+            <!-- Error/Loading Message -->
+            <p id="status-message" class="text-sm text-center mt-4 text-red-500 hidden">
+                Initializing...
+            </p>
+
+            <!-- User's Ticket Display -->
+            <div id="my-ticket-container" class="mt-8 pt-4 border-t border-gray-100 hidden">
+                <p class="text-lg font-bold text-gray-700 mb-4 text-center">Your Last Drawn Ticket</p>
+                <div id="my-ticket-display" class="ticket-display p-6 rounded-2xl mx-auto">
+                    <div class="text-lg font-bold">Your Ticket ID:</div>
+                    <div id="my-ticket-number" class="text-7xl font-black mt-2 text-center">000</div>
+                    <p id="ticket-status-message" class="text-sm mt-3 opacity-80 text-center">This number is unique and permanently yours.</p>
+                </div>
+                <div class="mt-4 flex justify-center">
+                    <button id="cancel-ticket-btn"
+                            class="px-4 py-2 text-sm font-semibold rounded-lg text-white bg-yellow-500 hover:bg-yellow-600 transition duration-150 disabled:opacity-50"
+                            disabled>
+                        Cancel Ticket
+                    </button>
+                </div>
+            </div>
+            
+            <!-- ADMIN PANEL (Hidden until admin logs in) -->
+            <div id="admin-panel" class="mt-10 pt-6 border-t-2 border-dashed border-red-300 hidden bg-red-50 p-6 rounded-xl">
+                <h2 class="text-xl font-bold text-red-700 mb-4 text-center flex items-center justify-center">
+                    <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.103A9.916 9.916 0 0121 12c0 5.523-4.477 10-10 10S1 17.523 1 12 5.477 2 12 2c2.97 0 5.76 1.288 7.76 3.397"></path></svg>
+                    Admin Control Panel
+                </h2>
+                <p class="text-sm text-red-600 mb-4 text-center">
+                    Use this button to reset the global ticket counter back to zero (0). This action is irreversible.
+                </p>
+                <button id="reset-counter-btn"
+                        class="button-danger w-full py-3 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-300/50 focus:outline-none focus:ring-4 focus:ring-red-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Reset Global Counter to 0
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Firebase Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, runTransaction, setDoc, getDoc, setLogLevel, collection, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- GLOBAL SETUP ---
+
+        // The specific Firebase config provided by the user.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbmO6koXLqaFPJJo0YyTD9khEB-V-H2xk",
+            authDomain: "luckyone-def58.firebaseapp.com",
+            projectId: "luckyone-def58",
+            storageBucket: "luckyone-def58.firebasestorage.app",
+            messagingSenderId: "625257358119",
+            appId: "1:625257358119:web:5d8f4a2c5715bfc1237f02",
+            measurementId: "G-HWSQNKTJ9D"
+        };
+        
+        // Admin credentials for demonstration (Must be created in Firebase Auth Console)
+        const ADMIN_EMAIL = 'admin@lottery.com'; 
+
+        // Firebase path setup
+        const appId = 'luckyone-def58'; // Using project ID as the app identifier
+        const COUNTER_COLLECTION = `/artifacts/${appId}/public/data/lottery_counter`;
+        const COUNTER_DOC_ID = 'master_counter';
+        // New collection for storing individual ticket records (the Ledger)
+        const TICKET_LEDGER_COLLECTION = `/artifacts/${appId}/public/data/lottery_tickets`; 
+
+        let db;
+        let auth;
+        let googleProvider;
+        let isCounterSetup = false; 
+        
+        // State to track the last ticket drawn in the current session for potential cancellation
+        let lastDrawnTicket = { 
+            id: null, 
+            docId: null,
+            status: null
+        }; 
+
+        // DOM Elements
+        const getTicketBtn = document.getElementById('get-ticket-btn');
+        const statusMessage = document.getElementById('status-message');
+        const latestGlobalId = document.getElementById('latest-global-id');
+        const myTicketContainer = document.getElementById('my-ticket-container');
+        const myTicketNumber = document.getElementById('my-ticket-number');
+        const ticketStatusMessage = document.getElementById('ticket-status-message');
+        const adminPanel = document.getElementById('admin-panel');
+        const resetCounterBtn = document.getElementById('reset-counter-btn');
+        const cancelTicketBtn = document.getElementById('cancel-ticket-btn');
+        
+        // Auth UI elements
+        const authStatusDisplay = document.getElementById('user-status-display');
+        const authButton = document.getElementById('auth-button');
+        const loginFormContainer = document.getElementById('login-form-container');
+        const googleSignInBtn = document.getElementById('google-sign-in-btn');
+        const loginError = document.getElementById('login-error');
+
+
+        /**
+         * Initializes Firebase and sets up the Auth state listener.
+         */
+        async function initFirebase() {
+            try {
+                // Set debug logging for Firestore
+                setLogLevel('Debug');
+
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+                googleProvider = new GoogleAuthProvider(); // Initialize Google Provider
+
+                // Set up the Auth state change handler first.
+                onAuthStateChanged(auth, handleAuthStateChange);
+
+            } catch (error) {
+                console.error("Firebase initialization failed:", error);
+                // Ensure error message is visible if initialization fails
+                statusMessage.textContent = `Fatal Error during initialization: ${error.message}`;
+                statusMessage.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Handles changes in the user's authentication state (login/logout).
+         * @param {Object} user - The currently authenticated user object or null.
+         */
+        function handleAuthStateChange(user) {
+            // Clear local state and UI elements on auth change
+            lastDrawnTicket = { id: null, docId: null, status: null }; 
+            myTicketContainer.classList.add('hidden'); 
+            
+            if (user) {
+                // User is signed in (Google user)
+
+                // Only perform Firestore setup once a user session is active.
+                if (!isCounterSetup) {
+                    setupCounterListener(); 
+                    initializeCounter();    
+                    isCounterSetup = true;
+                    statusMessage.classList.add('hidden'); 
+                }
+                
+                getTicketBtn.classList.remove('hidden');
+                getTicketBtn.disabled = false;
+                loginFormContainer.classList.add('hidden');
+
+                const isAdmin = user.email === ADMIN_EMAIL;
+                
+                // 1. Status Display
+                authStatusDisplay.textContent = `Signed in as: ${user.email} (ID: ${user.uid})`;
+                
+                // 2. Auth Button (Always shows Logout)
+                authButton.textContent = 'Logout';
+                authButton.classList.remove('hidden');
+                authButton.onclick = handleLogout; 
+                
+                // 3. Admin Panel
+                if (isAdmin) {
+                    adminPanel.classList.remove('hidden');
+                    resetCounterBtn.removeEventListener('click', resetCounter); 
+                    resetCounterBtn.addEventListener('click', resetCounter);
+                } else {
+                    adminPanel.classList.add('hidden');
+                }
+
+            } else {
+                // User is signed out
+                isCounterSetup = false; 
+                
+                authStatusDisplay.textContent = 'Signed out. Please sign in to draw a ticket.';
+                authButton.textContent = 'Sign In';
+                authButton.classList.remove('hidden');
+                authButton.onclick = () => {
+                    loginFormContainer.classList.remove('hidden');
+                    authButton.classList.add('hidden');
+                };
+                
+                getTicketBtn.classList.add('hidden');
+                adminPanel.classList.add('hidden');
+            }
+        }
+
+        /**
+         * Handles the Google Sign-In process using a popup.
+         */
+        async function handleGoogleSignIn() {
+            loginError.classList.add('hidden');
+            try {
+                // Use a pop-up window for Google Sign-In
+                await signInWithPopup(auth, googleProvider);
+                // Success is handled by onAuthStateChanged
+                loginFormContainer.classList.add('hidden');
+            } catch (error) {
+                console.error("Google Sign-In failed:", error.code, error.message);
+                let message = "Sign In failed. Please try again.";
+                if (error.code === 'auth/popup-closed-by-user') {
+                    message = "Sign In window closed. Try again.";
+                }
+                loginError.textContent = message;
+                loginError.classList.remove('hidden');
+            }
+        }
+        
+        /**
+         * Handles the logout process.
+         */
+        async function handleLogout() {
+            try {
+                await signOut(auth);
+                // Success is handled by onAuthStateChanged
+            } catch (error) {
+                console.error("Logout failed:", error);
+            }
+        }
+
+        /**
+         * Ensures the master_counter document exists.
+         */
+        async function initializeCounter() {
+            const counterRef = doc(db, COUNTER_COLLECTION, COUNTER_DOC_ID);
+            try {
+                const counterSnap = await getDoc(counterRef);
+                if (!counterSnap.exists()) {
+                    // Set initial value to 0 if it doesn't exist
+                    await setDoc(counterRef, { currentId: 0, lastUpdated: new Date() }, { merge: true });
+                }
+            } catch (e) {
+                console.error("Error initializing counter:", e);
+                if (auth.currentUser) {
+                    statusMessage.textContent = `Error initializing counter: ${e.message}`;
+                    statusMessage.classList.remove('hidden');
+                }
+            }
+        }
+
+        /**
+         * Sets up a real-time listener to display the latest ticket number globally.
+         */
+        function setupCounterListener() {
+            const counterRef = doc(db, COUNTER_COLLECTION, COUNTER_DOC_ID);
+
+            onSnapshot(counterRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    const latestId = data.currentId || 0;
+                    latestGlobalId.textContent = String(latestId).padStart(3, '0');
+                }
+            }, (error) => {
+                console.error("Error listening to counter:", error);
+                latestGlobalId.textContent = 'ERROR';
+            });
+        }
+        
+        /**
+         * Updates the UI to show the ticket and enables the cancel button.
+         * @param {number} ticketId 
+         * @param {string} docId 
+         * @param {string} status 
+         */
+        function updateTicketUI(ticketId, docId, status) {
+            myTicketNumber.textContent = String(ticketId).padStart(3, '0');
+            ticketStatusMessage.textContent = `Status: ${status.toUpperCase()}. Document ID: ${docId.substring(0, 8)}...`;
+            ticketStatusMessage.className = `text-sm mt-3 opacity-80 text-center font-bold ${status === 'canceled' ? 'text-red-700' : 'text-green-700'}`;
+            
+            cancelTicketBtn.disabled = (status === 'canceled');
+            cancelTicketBtn.textContent = (status === 'canceled') ? 'Ticket Canceled' : 'Cancel Ticket';
+            
+            myTicketContainer.classList.remove('hidden', 'opacity-50');
+            statusMessage.classList.add('hidden');
+        }
+
+
+        /**
+         * Executes a Firestore transaction to safely increment the ticket ID and records it in the ledger.
+         */
+        async function requestNewTicket() {
+            if (!auth.currentUser) return; 
+
+            getTicketBtn.disabled = true;
+            statusMessage.textContent = 'Drawing new ticket...';
+            statusMessage.classList.remove('hidden');
+            myTicketContainer.classList.add('opacity-50');
+
+            const counterRef = doc(db, COUNTER_COLLECTION, COUNTER_DOC_ID);
+            const ledgerCollectionRef = collection(db, TICKET_LEDGER_COLLECTION);
+            let newTicketId = 0;
+            const currentUserId = auth.currentUser.uid; 
+            let newTicketDocId = null;
+
+            try {
+                // 1. TRANSACTION: Increment the global counter
+                await runTransaction(db, async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+
+                    if (!counterDoc.exists()) {
+                        throw "Counter Document does not exist!";
+                    }
+
+                    const currentId = counterDoc.data().currentId || 0;
+                    newTicketId = currentId + 1;
+
+                    transaction.update(counterRef, {
+                        currentId: newTicketId,
+                        lastUpdated: new Date(),
+                        lastDrawnBy: currentUserId 
+                    });
+                });
+
+                // 2. LEDGER ENTRY: Record the new ticket in the ledger
+                const docRef = await addDoc(ledgerCollectionRef, {
+                    ticketId: newTicketId,
+                    userId: currentUserId,
+                    userEmail: auth.currentUser.email,
+                    timestamp: new Date(),
+                    status: 'active'
+                });
+                newTicketDocId = docRef.id;
+
+                // 3. UI/STATE UPDATE: Update local state and UI
+                lastDrawnTicket = { 
+                    id: newTicketId, 
+                    docId: newTicketDocId,
+                    status: 'active'
+                };
+                updateTicketUI(newTicketId, newTicketDocId, 'active');
+
+            } catch (e) {
+                console.error("Ticket transaction failed: ", e);
+                statusMessage.textContent = `Error getting ticket. Please try again. (${e.message || e})`;
+            } finally {
+                getTicketBtn.disabled = false;
+                myTicketContainer.classList.remove('opacity-50');
+            }
+        }
+        
+        /**
+         * Marks the last drawn ticket as 'canceled' in the ledger. (Backtracking)
+         */
+        async function cancelTicket() {
+            if (!lastDrawnTicket.docId || lastDrawnTicket.status === 'canceled') {
+                console.warn("No active ticket to cancel or already canceled.");
+                return;
+            }
+
+            cancelTicketBtn.disabled = true;
+            statusMessage.textContent = `Canceling ticket #${lastDrawnTicket.id}...`;
+            statusMessage.classList.remove('hidden');
+            
+            try {
+                const ticketRef = doc(db, TICKET_LEDGER_COLLECTION, lastDrawnTicket.docId);
+                
+                // Update the document status to 'canceled'
+                await updateDoc(ticketRef, {
+                    status: 'canceled',
+                    cancellationTime: new Date(),
+                    canceledBy: auth.currentUser.uid
+                });
+
+                // Update local state and UI
+                lastDrawnTicket.status = 'canceled';
+                updateTicketUI(lastDrawnTicket.id, lastDrawnTicket.docId, 'canceled');
+                
+                statusMessage.textContent = `Ticket #${lastDrawnTicket.id} successfully canceled.`;
+                statusMessage.classList.add('text-green-500');
+
+            } catch (e) {
+                console.error("Ticket cancellation failed: ", e);
+                statusMessage.textContent = `Error canceling ticket. ${e.message || e}`;
+                statusMessage.classList.add('text-red-500');
+
+            } finally {
+                cancelTicketBtn.disabled = (lastDrawnTicket.status === 'canceled');
+                setTimeout(() => {
+                    statusMessage.classList.add('hidden');
+                    statusMessage.classList.remove('text-green-500', 'text-red-500'); 
+                }, 3000); 
+            }
+        }
+
+
+        /**
+         * Executes a Firestore transaction to safely reset the counter to 0.
+         */
+        async function resetCounter() {
+            if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
+                console.warn("Attempted reset by non-admin user.");
+                return;
+            }
+            
+            resetCounterBtn.disabled = true;
+            statusMessage.textContent = 'Resetting global counter...';
+            statusMessage.classList.remove('hidden');
+            
+            const counterRef = doc(db, COUNTER_COLLECTION, COUNTER_DOC_ID);
+            const currentUserId = auth.currentUser.uid;
+
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    if (!counterDoc.exists()) {
+                        throw new Error("Counter Document not found.");
+                    }
+
+                    // Set the currentId back to 0
+                    transaction.update(counterRef, {
+                        currentId: 0,
+                        lastUpdated: new Date(),
+                        resetBy: currentUserId,
+                        resetTimestamp: new Date()
+                    });
+                });
+
+                statusMessage.textContent = 'Global counter successfully reset to 0.';
+                statusMessage.classList.add('text-green-500');
+                statusMessage.classList.remove('text-red-500');
+
+            } catch (e) {
+                console.error("Counter reset transaction failed: ", e);
+                statusMessage.textContent = `Error resetting counter. ${e.message || e}`;
+                statusMessage.classList.add('text-red-500');
+                statusMessage.classList.remove('text-green-500');
+            } finally {
+                resetCounterBtn.disabled = false;
+                // Hide status message after 3 seconds
+                setTimeout(() => {
+                    statusMessage.classList.add('hidden');
+                    statusMessage.classList.remove('text-green-500'); // Reset color
+                }, 3000); 
+            }
+        }
+
+        // --- EVENT LISTENERS AND INITIAL CALL ---
+
+        // Main actions
+        getTicketBtn.addEventListener('click', requestNewTicket);
+        cancelTicketBtn.addEventListener('click', cancelTicket);
+        
+        // Google Sign-In button click
+        googleSignInBtn.addEventListener('click', handleGoogleSignIn);
+
+        // Start initialization when the window loads
+        window.onload = () => {
+            statusMessage.classList.remove('hidden');
+            statusMessage.textContent = 'Initializing Firebase...';
+            initFirebase();
+        };
+
+    </script>
+
+</body>
+</html>
