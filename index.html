@@ -98,6 +98,15 @@
                 </div>
             </div>
 
+            <!-- Registration Form (New Section) -->
+            <div id="registration-form-container" class="mb-6 p-4 border border-green-200 bg-green-50 rounded-lg hidden">
+                <h2 class="text-lg font-bold text-green-700 mb-3">Your Details (Required)</h2>
+                <input id="user-name" type="text" placeholder="Full Name (Required)" class="w-full p-2 mb-3 border rounded-lg focus:ring-green-500 focus:border-green-500" required>
+                <input id="user-phone" type="tel" placeholder="Phone Number (Required)" class="w-full p-2 mb-3 border rounded-lg focus:ring-green-500 focus:border-green-500" required>
+                <input id="user-email" type="email" placeholder="Contact Email (Defaults to Google Email)" class="w-full p-2 mb-3 border rounded-lg focus:ring-green-500 focus:border-green-500">
+                <input id="user-address" type="text" placeholder="Address (Required)" class="w-full p-2 mb-3 border rounded-lg focus:ring-green-500 focus:border-green-500" required>
+            </div>
+
             <!-- Action Button (Hidden until logged in) -->
             <button id="get-ticket-btn"
                     class="button-primary w-full py-3 rounded-xl text-white font-bold text-lg shadow-lg shadow-blue-300/50 focus:outline-none focus:ring-4 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed hidden"
@@ -137,8 +146,12 @@
                     Use this button to reset the global ticket counter back to zero (0). This action is irreversible.
                 </p>
                 <button id="reset-counter-btn"
-                        class="button-danger w-full py-3 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-300/50 focus:outline-none focus:ring-4 focus:ring-red-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                        class="button-danger w-full py-3 rounded-xl text-white font-bold text-lg shadow-lg shadow-red-300/50 focus:outline-none focus:ring-4 focus:ring-red-300 disabled:opacity-50 disabled:cursor-not-allowed mb-4">
                     Reset Global Counter to 0
+                </button>
+                <button id="view-ledger-btn"
+                        class="w-full py-3 rounded-xl text-white font-bold text-lg shadow-lg bg-red-800 hover:bg-red-700 transition duration-150">
+                    View Ticket Ledger (Console)
                 </button>
             </div>
 
@@ -149,7 +162,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, runTransaction, setDoc, getDoc, setLogLevel, collection, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, runTransaction, setDoc, getDoc, setLogLevel, collection, addDoc, updateDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- GLOBAL SETUP ---
 
@@ -196,13 +209,21 @@
         const adminPanel = document.getElementById('admin-panel');
         const resetCounterBtn = document.getElementById('reset-counter-btn');
         const cancelTicketBtn = document.getElementById('cancel-ticket-btn');
-        
+        const viewLedgerBtn = document.getElementById('view-ledger-btn'); 
+
         // Auth UI elements
         const authStatusDisplay = document.getElementById('user-status-display');
         const authButton = document.getElementById('auth-button');
         const loginFormContainer = document.getElementById('login-form-container');
         const googleSignInBtn = document.getElementById('google-sign-in-btn');
         const loginError = document.getElementById('login-error');
+
+        // Registration Form elements
+        const registrationFormContainer = document.getElementById('registration-form-container'); 
+        const userNameInput = document.getElementById('user-name'); 
+        const userPhoneInput = document.getElementById('user-phone'); 
+        const userEmailInput = document.getElementById('user-email'); 
+        const userAddressInput = document.getElementById('user-address'); 
 
 
         /**
@@ -218,7 +239,7 @@
                 auth = getAuth(app);
                 googleProvider = new GoogleAuthProvider(); // Initialize Google Provider
 
-                // Set up the Auth state change handler first.
+                // Set up the Auth state change handler first. This will fire immediately.
                 onAuthStateChanged(auth, handleAuthStateChange);
 
             } catch (error) {
@@ -234,24 +255,33 @@
          * @param {Object} user - The currently authenticated user object or null.
          */
         function handleAuthStateChange(user) {
+            
+            // --- FIX: 1. CORE FIRESTORE SETUP RUNS ONCE REGARDLESS OF LOGIN STATE ---
+            // This ensures the global counter loads immediately, resolving the stuck "Initializing" message.
+            if (!isCounterSetup) {
+                setupCounterListener(); 
+                initializeCounter();    
+                isCounterSetup = true;
+                statusMessage.classList.add('hidden'); 
+            }
+            // -----------------------------------------------------------------------
+
             // Clear local state and UI elements on auth change
             lastDrawnTicket = { id: null, docId: null, status: null }; 
             myTicketContainer.classList.add('hidden'); 
             
             if (user) {
                 // User is signed in (Google user)
-
-                // Only perform Firestore setup once a user session is active.
-                if (!isCounterSetup) {
-                    setupCounterListener(); 
-                    initializeCounter();    
-                    isCounterSetup = true;
-                    statusMessage.classList.add('hidden'); 
-                }
                 
                 getTicketBtn.classList.remove('hidden');
                 getTicketBtn.disabled = false;
                 loginFormContainer.classList.add('hidden');
+                registrationFormContainer.classList.remove('hidden'); // SHOW REGISTRATION FORM
+
+                // Pre-fill email input with Google auth email if it's empty
+                if (!userEmailInput.value) {
+                    userEmailInput.value = user.email;
+                }
 
                 const isAdmin = user.email === ADMIN_EMAIL;
                 
@@ -268,13 +298,14 @@
                     adminPanel.classList.remove('hidden');
                     resetCounterBtn.removeEventListener('click', resetCounter); 
                     resetCounterBtn.addEventListener('click', resetCounter);
+                    viewLedgerBtn.removeEventListener('click', viewTicketLedger); 
+                    viewLedgerBtn.addEventListener('click', viewTicketLedger);     
                 } else {
                     adminPanel.classList.add('hidden');
                 }
 
             } else {
                 // User is signed out
-                isCounterSetup = false; 
                 
                 authStatusDisplay.textContent = 'Signed out. Please sign in to draw a ticket.';
                 authButton.textContent = 'Sign In';
@@ -286,6 +317,7 @@
                 
                 getTicketBtn.classList.add('hidden');
                 adminPanel.classList.add('hidden');
+                registrationFormContainer.classList.add('hidden'); // HIDE REGISTRATION FORM
             }
         }
 
@@ -385,9 +417,23 @@
         async function requestNewTicket() {
             if (!auth.currentUser) return; 
 
+            // 0. Input Validation and Collection
+            const name = userNameInput.value.trim();
+            const phone = userPhoneInput.value.trim();
+            const email = userEmailInput.value.trim() || auth.currentUser.email; // Use contact email or user's auth email
+            const address = userAddressInput.value.trim();
+
+            if (!name || !phone || !address) {
+                statusMessage.textContent = 'Please fill in your Name, Phone Number, and Address before drawing a ticket.';
+                statusMessage.classList.remove('hidden');
+                statusMessage.classList.add('text-red-500');
+                return; 
+            }
+
             getTicketBtn.disabled = true;
             statusMessage.textContent = 'Drawing new ticket...';
             statusMessage.classList.remove('hidden');
+            statusMessage.classList.remove('text-red-500');
             myTicketContainer.classList.add('opacity-50');
 
             const counterRef = doc(db, COUNTER_COLLECTION, COUNTER_DOC_ID);
@@ -415,11 +461,15 @@
                     });
                 });
 
-                // 2. LEDGER ENTRY: Record the new ticket in the ledger
+                // 2. LEDGER ENTRY: Record the new ticket and user data in the ledger
                 const docRef = await addDoc(ledgerCollectionRef, {
                     ticketId: newTicketId,
                     userId: currentUserId,
                     userEmail: auth.currentUser.email,
+                    contactEmail: email,
+                    userName: name,
+                    userPhone: phone,
+                    userAddress: address,
                     timestamp: new Date(),
                     status: 'active'
                 });
@@ -436,6 +486,7 @@
             } catch (e) {
                 console.error("Ticket transaction failed: ", e);
                 statusMessage.textContent = `Error getting ticket. Please try again. (${e.message || e})`;
+                statusMessage.classList.add('text-red-500');
             } finally {
                 getTicketBtn.disabled = false;
                 myTicketContainer.classList.remove('opacity-50');
@@ -454,6 +505,7 @@
             cancelTicketBtn.disabled = true;
             statusMessage.textContent = `Canceling ticket #${lastDrawnTicket.id}...`;
             statusMessage.classList.remove('hidden');
+            statusMessage.classList.remove('text-red-500');
             
             try {
                 const ticketRef = doc(db, TICKET_LEDGER_COLLECTION, lastDrawnTicket.docId);
@@ -485,6 +537,51 @@
                 }, 3000); 
             }
         }
+        
+        /**
+         * Fetches all records from the ticket ledger and logs them to the console.
+         */
+        async function viewTicketLedger() {
+            if (!auth.currentUser || auth.currentUser.email !== ADMIN_EMAIL) {
+                console.warn("Attempted ledger view by non-admin user.");
+                return;
+            }
+
+            viewLedgerBtn.disabled = true;
+            statusMessage.textContent = 'Fetching ticket ledger... Check console for output.';
+            statusMessage.classList.remove('hidden');
+            statusMessage.classList.remove('text-red-500');
+
+            try {
+                const ledgerCollectionRef = collection(db, TICKET_LEDGER_COLLECTION);
+                const snapshot = await getDocs(ledgerCollectionRef);
+                
+                const ledgerData = snapshot.docs.map(doc => ({
+                    DocId: doc.id,
+                    ...doc.data(),
+                    timestamp: doc.data().timestamp ? doc.data().timestamp.toDate().toLocaleString() : 'N/A' // Format timestamp
+                }));
+
+                console.log("--- TICKET LEDGER REPORT (Full Data) ---");
+                console.table(ledgerData);
+                console.log(`Total Tickets Recorded: ${ledgerData.length}`);
+                console.log("---------------------------------------");
+
+                statusMessage.textContent = `Ledger fetched successfully. ${ledgerData.length} records logged to console.`;
+                statusMessage.classList.add('text-green-500');
+
+            } catch (e) {
+                console.error("Failed to fetch ticket ledger:", e);
+                statusMessage.textContent = `Error fetching ledger: ${e.message}`;
+                statusMessage.classList.add('text-red-500');
+            } finally {
+                viewLedgerBtn.disabled = false;
+                setTimeout(() => {
+                    statusMessage.classList.add('hidden');
+                    statusMessage.classList.remove('text-green-500', 'text-red-500');
+                }, 5000);
+            }
+        }
 
 
         /**
@@ -499,6 +596,7 @@
             resetCounterBtn.disabled = true;
             statusMessage.textContent = 'Resetting global counter...';
             statusMessage.classList.remove('hidden');
+            statusMessage.classList.remove('text-red-500');
             
             const counterRef = doc(db, COUNTER_COLLECTION, COUNTER_DOC_ID);
             const currentUserId = auth.currentUser.uid;
@@ -521,19 +619,17 @@
 
                 statusMessage.textContent = 'Global counter successfully reset to 0.';
                 statusMessage.classList.add('text-green-500');
-                statusMessage.classList.remove('text-red-500');
 
             } catch (e) {
                 console.error("Counter reset transaction failed: ", e);
                 statusMessage.textContent = `Error resetting counter. ${e.message || e}`;
                 statusMessage.classList.add('text-red-500');
-                statusMessage.classList.remove('text-green-500');
             } finally {
                 resetCounterBtn.disabled = false;
                 // Hide status message after 3 seconds
                 setTimeout(() => {
                     statusMessage.classList.add('hidden');
-                    statusMessage.classList.remove('text-green-500'); // Reset color
+                    statusMessage.classList.remove('text-green-500', 'text-red-500'); // Reset color
                 }, 3000); 
             }
         }
