@@ -154,6 +154,8 @@
             <!-- 2. AGENT PANEL VIEW -->
             <div id="agent-view" class="card hidden">
                 <h2 class="text-3xl font-bold text-blue-700 mb-6">Agent Panel Dashboard</h2>
+                <!-- Added Agent ID Display for clarity and debugging -->
+                <p class="text-sm text-gray-500 mb-4">Your Agent ID: <span id="current-agent-id" class="font-semibold text-blue-600">N/A</span></p>
                 
                 <!-- Agent Stats -->
                 <div id="agent-stats" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -171,10 +173,11 @@
                     </div>
                 </div>
 
-                <!-- Registration & Serial Generation -->
-                <div class="agent-section border-blue-400">
-                    <h3 class="text-xl font-semibold text-blue-700 mb-4">Generate Serial Number</h3>
+                <!-- Registration & Serial Generation (The Form) -->
+                <div id="agent-registration-container" class="agent-section border-blue-400">
+                    <h3 class="text-xl font-semibold text-blue-700 mb-4">Generate Serial Number & Register Participant</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Lottery Selection is mandatory -->
                         <select id="agent-lottery-select" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500 mb-3"></select>
                         <input id="agent-participant-name" type="text" placeholder="Participant Name (Required)" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
                         <input id="agent-participant-phone" type="tel" placeholder="Phone (Optional)" class="w-full p-3 border rounded-lg focus:ring-blue-500 focus:border-blue-500">
@@ -185,6 +188,14 @@
                     </button>
                     <p id="agent-status" class="text-sm mt-3 text-center hidden"></p>
                 </div>
+                
+                <!-- NEW: No Lottery Alert -->
+                <div id="no-active-lottery-alert" class="hidden p-4 mt-4 text-center bg-yellow-100 border border-yellow-400 rounded-lg">
+                    <p class="font-semibold text-xl text-yellow-800 mb-2">Registration Blocked</p>
+                    <p class="text-sm text-yellow-700">No **Active Lotteries** are currently available. Please contact the Admin to create and activate a new lottery run.</p>
+                </div>
+                <!-- END NEW -->
+
 
                 <!-- Agent Participant List -->
                 <div class="mt-8">
@@ -347,10 +358,13 @@
         let views = {};
         // Status/Auth
         let loadingOverlay, globalStatusMsg, authButton, userRoleDisplay, loginFormContainer, googleSignInBtn, loginError;
-        let agentLoginEmail, agentLoginPassword, agentSignInBtn; // NEW AGENT LOGIN ELEMENTS
+        let agentLoginEmail, agentLoginPassword, agentSignInBtn; 
 
         // Agent Elements
+        let currentAgentIdDisplay; 
         let agentLotterySelect, agentParticipantName, agentParticipantPhone, agentPaymentProofRef, agentGenerateBtn, agentStatus, agentParticipantsTable;
+        let agentRegistrationContainer, noActiveLotteryAlert; 
+        
         // Admin Elements
         let adminLotteryFilter, adminAgentFilter, adminParticipantsTable;
         // Verification Elements
@@ -379,11 +393,12 @@
             loginFormContainer = document.getElementById('login-form-container'); 
             googleSignInBtn = document.getElementById('google-sign-in-btn');
             loginError = document.getElementById('login-error'); 
-            agentLoginEmail = document.getElementById('agent-login-email'); // NEW
-            agentLoginPassword = document.getElementById('agent-login-password'); // NEW
-            agentSignInBtn = document.getElementById('agent-sign-in-btn'); // NEW
+            agentLoginEmail = document.getElementById('agent-login-email'); 
+            agentLoginPassword = document.getElementById('agent-login-password'); 
+            agentSignInBtn = document.getElementById('agent-sign-in-btn'); 
 
             // Agent Elements
+            currentAgentIdDisplay = document.getElementById('current-agent-id'); 
             agentLotterySelect = document.getElementById('agent-lottery-select');
             agentParticipantName = document.getElementById('agent-participant-name');
             agentParticipantPhone = document.getElementById('agent-participant-phone');
@@ -391,6 +406,8 @@
             agentGenerateBtn = document.getElementById('agent-generate-btn');
             agentStatus = document.getElementById('agent-status');
             agentParticipantsTable = document.getElementById('agent-participants-table');
+            agentRegistrationContainer = document.getElementById('agent-registration-container'); 
+            noActiveLotteryAlert = document.getElementById('no-active-lottery-alert'); 
             
             // Admin Elements
             adminLotteryFilter = document.getElementById('admin-lottery-filter');
@@ -409,7 +426,7 @@
 
             // 2. Attach Listeners
             if (googleSignInBtn) googleSignInBtn.addEventListener('click', handleGoogleSignIn);
-            if (agentSignInBtn) agentSignInBtn.addEventListener('click', handleAgentLogin); // NEW AGENT LOGIN LISTENER
+            if (agentSignInBtn) agentSignInBtn.addEventListener('click', handleAgentLogin); 
             
             document.getElementById('home-agent-login-btn').addEventListener('click', () => {
                  if (loginFormContainer) loginFormContainer.classList.remove('hidden');
@@ -470,6 +487,16 @@
                 loadAdminData();
             }
         }
+
+        /**
+         * Generates a short ID based on the email prefix for deterministic agent identification.
+         * @param {string} email - The agent's email.
+         * @returns {string} Short ID string.
+         */
+        function generateAgentId(email) {
+            const prefix = email.split('@')[0];
+            return 'AGENT-' + prefix.substring(0, 8).toUpperCase();
+        }
         
         // --- FIREBASE INITIALIZATION & AUTH ---
 
@@ -515,8 +542,8 @@
                     renderView('admin');
                 } else if (AGENT_EMAILS.includes(user.email)) {
                     userRole = 'agent';
-                    // Agent ID is generated from UID for unique tracking
-                    currentAgentId = 'AGENT-' + user.uid.substring(0, 8).toUpperCase(); // Using 8 chars for better distinction
+                    // Agent ID is generated from EMAIL for deterministic tracking
+                    currentAgentId = generateAgentId(user.email); 
                     renderView('agent');
                 } else {
                     userRole = 'participant'; // Signed in user but not admin/agent
@@ -526,6 +553,14 @@
                 userRoleDisplay.textContent = userRole.toUpperCase();
                 authButton.textContent = 'Logout';
                 authButton.onclick = handleLogout; 
+                
+                // Update Agent ID display if available
+                if (currentAgentIdDisplay) {
+                    currentAgentIdDisplay.textContent = currentAgentId || 'N/A';
+                }
+                
+                // Set up listener for the main Lottery Selector when authenticated
+                setupLotterySelectorListener();
 
             } else {
                 userRole = 'guest';
@@ -533,17 +568,17 @@
                 authButton.textContent = 'Sign In';
                 authButton.onclick = () => renderView('home');
                 renderView('home');
+                
+                // Clear Agent ID display
+                if (currentAgentIdDisplay) {
+                    currentAgentIdDisplay.textContent = 'N/A';
+                }
             }
 
             // Update UI/Header based on role
             authButton.classList.remove('hidden');
             if (loadingOverlay) loadingOverlay.classList.add('hidden');
             if (loginFormContainer) loginFormContainer.classList.add('hidden');
-            
-            // Set up listener for the main Lottery Selector when authenticated
-            if (userRole !== 'guest') {
-                setupLotterySelectorListener();
-            }
         }
 
         /**
@@ -620,14 +655,37 @@
          * Sets up a listener for active lotteries to populate selectors.
          */
         function setupLotterySelectorListener() {
+            if(!db) return; // Ensure DB is initialized
+            
             const q = collection(db, COLLECTIONS.LOTTERIES);
+            
+            // Clear previous listener if it exists
+            if (lotteryUnsub) lotteryUnsub();
+
             lotteryUnsub = onSnapshot(q, (snapshot) => {
                 const lotteries = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+                const activeLotteries = lotteries.filter(l => l.status === 'Active');
+                
+                // --- DEBUG LOGGING ---
+                console.log(`[LOTTERY STATUS] Found ${activeLotteries.length} active lotteries.`);
+                // ---------------------
+
+                // --- HANDLE AGENT REGISTRATION VISIBILITY ---
+                if (agentRegistrationContainer && noActiveLotteryAlert && userRole === 'agent') {
+                    if (activeLotteries.length === 0) {
+                        agentRegistrationContainer.classList.add('hidden');
+                        noActiveLotteryAlert.classList.remove('hidden');
+                    } else {
+                        agentRegistrationContainer.classList.remove('hidden');
+                        noActiveLotteryAlert.classList.add('hidden');
+                    }
+                }
+                
                 // Populate Agent Lottery Select
                 if(agentLotterySelect) {
                     agentLotterySelect.innerHTML = '<option value="">Select Lottery</option>';
-                    lotteries.filter(l => l.status === 'Active').forEach(lottery => {
+                    activeLotteries.forEach(lottery => {
                         const option = document.createElement('option');
                         option.value = lottery.id;
                         option.textContent = `${lottery.title} (Fee: ₹${lottery.entryFee})`;
@@ -648,8 +706,13 @@
                 
                 // Enable agent generation button if lotteries exist
                 if(agentGenerateBtn) {
-                    agentGenerateBtn.disabled = lotteries.filter(l => l.status === 'Active').length === 0;
+                    agentGenerateBtn.disabled = activeLotteries.length === 0 || !agentLotterySelect.value;
+                    // Add listener to re-check if button should be disabled when selection changes
+                    agentLotterySelect.onchange = () => {
+                         agentGenerateBtn.disabled = !agentLotterySelect.value;
+                    };
                 }
+
 
                 // Update countdown timer based on the next ending active lottery
                 const nextEndDate = lotteries
@@ -707,7 +770,8 @@
             // Load Agent Filter List (assuming agents exist in a collection or are hardcoded)
             adminAgentFilter.innerHTML = '<option value="">All Agents</option>';
             AGENT_EMAILS.forEach(email => {
-                const agentId = 'AGENT-' + nanoid(4).toUpperCase(); // Placeholder ID logic
+                // Use deterministic Agent ID matching logic
+                const agentId = generateAgentId(email); 
                 const option = document.createElement('option');
                 option.value = agentId;
                 option.textContent = email;
@@ -716,8 +780,8 @@
             
             // Set up listener for ALL participants
             setupAdminParticipantListener();
-            adminLotteryFilter.addEventListener('change', setupAdminParticipantListener);
-            adminAgentFilter.addEventListener('change', setupAdminParticipantListener);
+            adminLotteryFilter.onchange = setupAdminParticipantListener;
+            adminAgentFilter.onchange = setupAdminParticipantListener;
         }
 
         function setupAdminParticipantListener() {
@@ -883,6 +947,10 @@
         function loadAgentData() {
             if (agentUnsub) agentUnsub(); // Clear previous participant list listener
             if (agentStatsUnsub) agentStatsUnsub(); // Clear previous stats listener
+            
+            // --- DEBUG LOGGING ---
+            console.log(`[AGENT PANEL] Loading data for Agent ID: ${currentAgentId}`);
+            // ---------------------
 
             // 1. Setup Participant List Listener (Filters by current agent's ID)
             const qParticipants = query(
